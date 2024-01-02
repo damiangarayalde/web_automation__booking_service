@@ -35,7 +35,7 @@ def login(driver):
 
     password_field = wait.until(
         EC.presence_of_element_located((By.ID, 'login-password')))
-    password_field.send_keys(os.environ.get('USERNAME'))
+    password_field.send_keys(os.environ.get('PASSWORD'))
 
     confirm_button = wait.until(EC.presence_of_element_located(
         (By.CLASS_NAME, 'button.primary.g-recaptcha')))
