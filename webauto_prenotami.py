@@ -18,6 +18,9 @@ site_url = "https://prenotami.esteri.it/"
 
 msg_text = "Stante l'elevata richiesta i posti disponibili per il servizio scelto sono esauriti. Si invita a controllare con frequenza la disponibilità in quanto l’agenda viene aggiornata regolarmente"
 
+time_format = "%Y-%m-%d - %H:%M:%S"
+
+
 # -------------------------------------------------------------------
 
 
@@ -31,11 +34,11 @@ def login(driver):
 
     username_field = wait.until(
         EC.presence_of_element_located((By.ID, 'login-email')))
-    username_field.send_keys(os.environ.get('USERNAME'))
+    username_field.send_keys(os.environ.get('PRENOTAMI_USERNAME'))
 
     password_field = wait.until(
         EC.presence_of_element_located((By.ID, 'login-password')))
-    password_field.send_keys(os.environ.get('PASSWORD'))
+    password_field.send_keys(os.environ.get('PRENOTAMI_PASSWORD'))
 
     confirm_button = wait.until(EC.presence_of_element_located(
         (By.CLASS_NAME, 'button.primary.g-recaptcha')))
@@ -45,57 +48,65 @@ def login(driver):
 # -------------------------------------------------------------------
 def service_to_book_is_available(driver):
 
-    # Set an explicit wait
-    wait = WebDriverWait(driver, 60)
+    try:
+        # Set an explicit wait
+        wait = WebDriverWait(driver, 90)
 
-    sleep(random.randint(5, 40))
-    driver.get(site_url+'Services/Booking/224')  # 224
+        driver.get(site_url+'Services/Booking/224')
+        sleep(random.randint(20, 40))
 
-    # Here we should catch the popup:
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-    # if present: click and wait a random time like 20 to 50 min
-    # else:   continue the navigation
-    sleep(random.randint(10, 40))
+        booking_unavailable_pop_up_msg = soup.find(
+            'div',    class_='jconfirm-content')
 
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
+        if booking_unavailable_pop_up_msg:
 
-    pop_up_object = soup.find('div',    class_='jconfirm-content')
+            if (msg_text != booking_unavailable_pop_up_msg.text.strip()):
+                print(booking_unavailable_pop_up_msg.text.strip())
 
-    if pop_up_object:
+            booking_unavailable_confirm_button = wait.until(
+                EC.presence_of_element_located((By.CLASS_NAME, "btn-blue")))
+            booking_unavailable_confirm_button.click()
 
-        if (msg_text != pop_up_object.text.strip()):
-            print(pop_up_object.text.strip())
+            return False
 
-        ok_button = wait.until(
-            EC.presence_of_element_located((By.CLASS_NAME, "btn-blue")))
-        ok_button.click()
+        else:
+            print('We found no pop up. Taking a screenshot.')
 
-        return False
+            driver.save_screenshot("screenshot.png")
 
-    else:
-        print('no pop up / Booking available')
+            macos_alert()
 
-        driver.save_screenshot("screenshot.png")
+            return True
 
-        macos_alert()
-
-        return True
-
+    except Exception as e:
+        print(f"An error occurred at service_to_book_is_available: {e}")
 
 # -------------------------------------------------------------------
+
+
 def confirm_user_data_to_access_calendar(driver):
 
-    privacy_policy_checkbox = driver.find_element(By.ID, 'PrivacyCheck')
+    # Set an explicit wait
+    wait = WebDriverWait(driver, 40)
+
+    privacy_policy_checkbox = wait.until(
+        EC.presence_of_element_located((By.ID, 'PrivacyCheck')))
 
     # mark the checkbox
     if not privacy_policy_checkbox.is_selected():
         privacy_policy_checkbox.click()
 
-    confirm_button = driver.find_element(By.ID, 'btnAvanti')
+    confirm_button = wait.until(
+        EC.presence_of_element_located((By.ID, 'btnAvanti')))
+
     confirm_button.click()
 
     # give time for the elements to load
-    sleep(1)
+
+    # print('hello there')
+    # sleep(10)
 
     # Switch to the confirmation dialog
     confirmation_dialog = driver.switch_to.alert
@@ -110,37 +121,42 @@ def find_available_date_and_book(driver):
     # check the next 24 months
     # soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-    max_attempts = 2
+    # Set an explicit wait
+    wait = WebDriverWait(driver, 90)
+
+    max_attempts = 12
     attempts = 0
 
     while attempts < max_attempts:
 
         try:
-            available_date_value = driver.find_element(
-                By.CLASS_NAME, 'day.availableDay')
+            available_date_value = wait.until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'day.availableDay')))
+
             print(f'''Next available date is {available_date_value.text}.''')
 
             available_date_value.click()
 
-            sleep(3)
+            hour_block = wait.until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'dot')))
 
-            hour_block = driver.find_element(By.CLASS_NAME, 'dot')
             hour_block.click()
 
-            submit = driver.find_element(By.ID, 'btnPrenotaNoOtp')
+            submit = wait.until(
+                EC.presence_of_element_located((By.ID, 'btnPrenotaNoOtp')))
+
             print(submit.text)
-            # submit.click()
+            submit.click()
 
             print('reservation successfull, breaking the loop')
             break
 
         except NoSuchElementException:
 
-            sleep(3)
-
             # Handle the case where the element was not found
-            next_month_button = driver.find_element(
-                By.CLASS_NAME, 'dtpicker-next')
+            next_month_button = wait.until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'dtpicker-next')))
+
             next_month_button.click()
 
             print(f"There were no available dates, checking next month.")
@@ -160,7 +176,7 @@ def macos_alert():
 
     try:
         # Run the AppleScript commands
-        # subprocess.run(["afplay", "/System/Library/Sounds/Ping.aiff"])
+        subprocess.run(["afplay", "/System/Library/Sounds/Ping.aiff"])
         subprocess.run(['osascript', '-e', notification_script])
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -194,6 +210,8 @@ if __name__ == "__main__":
 
                 if service_to_book_is_available(driver):
 
+                    sleep(400)
+
                     confirm_user_data_to_access_calendar(driver)
 
                     find_available_date_and_book(driver)
@@ -203,16 +221,20 @@ if __name__ == "__main__":
                     driver.quit()
 
                 else:
-                    print(f'''Booking unavailable at: {datetime.now()} .''')
+                    print(
+                        f'''{datetime.now().strftime(time_format)} -- No dates available, retring in 40 secs.''')
                     sleep(40)
-
-                # # Check if the Escape key is pressed
-                # if keyboard.is_pressed('esc'):
-                #     print("Escape key pressed. Exiting loop.")
-                #     break
 
         except:
             macos_alert_error()
-            print(f'''Restarting due to error at: {datetime.now()}''')
+            print(
+                f'''{datetime.now().strftime(time_format)} - ERROR --> Restarting ''')
             driver.quit()
             sleep(40)
+
+# campo
+# <input type="text" placeholder="OTP" id="otp-input" name="otp-input" class="name form-control" style="margin-bottom:20px;" required="">
+# boton de enviar nuevo codice
+# <input type="text" placeholder="OTP" id="otp-input" name="otp-input" class="name form-control" style="margin-bottom:20px;" required="">
+
+# //*[@id="PrivacyCheck"]  /html/body/main/form/div/div[5]/div/div/input[1]    check de privacidad
