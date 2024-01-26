@@ -100,13 +100,20 @@ class booking_bot:
                 return False
 
             else:
-                print('We found no pop up. Taking a screenshot.')
+                current_url = self.driver.current_url
 
-                self.driver.save_screenshot("screenshot.png")
+                if (current_url == 'https://prenotami.esteri.it/Home?ReturnUrl=%2fServices%2fBooking%2f224'):
+                    self.login(self.driver)
+                    return False
 
-                self._raise_alert()
+                else:
+                    print('We found no pop up. Taking a screenshot.')
 
-                return True
+                    self.driver.save_screenshot("screenshot.png")
+
+                    self._raise_alert()
+
+                    return True
 
         except Exception as e:
             print(f"An error occurred at service_to_book_is_available: {e}")

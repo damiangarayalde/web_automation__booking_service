@@ -80,13 +80,14 @@ def service_to_book_is_available(driver):
                 login(driver)
                 return False
 
-            print('We found no pop up. Taking a screenshot.')
+            else:
+                print('We found no pop up. Taking a screenshot.')
 
-            driver.save_screenshot("screenshot.png")
+                driver.save_screenshot("screenshot.png")
 
-            macos_alert()
+                macos_alert()
 
-            return True
+                return True
 
     except Exception as e:
         print(f"An error occurred at service_to_book_is_available: {e}")
