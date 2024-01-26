@@ -14,6 +14,11 @@ from selenium.common.exceptions import NoSuchElementException
 from time import sleep
 from dotenv import load_dotenv
 
+# Importing libraries
+import imaplib
+import email
+
+
 site_url = "https://prenotami.esteri.it/"
 
 msg_text = "Stante l'elevata richiesta i posti disponibili per il servizio scelto sono esauriti. Si invita a controllare con frequenza la disponibilità in quanto l’agenda viene aggiornata regolarmente"
@@ -23,11 +28,7 @@ time_format = "%Y-%m-%d - %H:%M:%S"
 
 # -------------------------------------------------------------------
 
-
 def login(driver):
-
-    # Load environment variables from .env file
-    load_dotenv()
 
     # Set an explicit wait with a maximum timeout of 60 seconds
     wait = WebDriverWait(driver, 60)
@@ -45,7 +46,6 @@ def login(driver):
     confirm_button.click()
 
 
-# -------------------------------------------------------------------
 def service_to_book_is_available(driver):
 
     try:
@@ -72,6 +72,14 @@ def service_to_book_is_available(driver):
             return False
 
         else:
+            current_url = driver.current_url
+
+            # Print or use the current URL as needed
+            print("Current URL:", current_url)
+            if (current_url == 'https://prenotami.esteri.it/Home?ReturnUrl=%2fServices%2fBooking%2f224'):
+                login(driver)
+                return False
+
             print('We found no pop up. Taking a screenshot.')
 
             driver.save_screenshot("screenshot.png")
@@ -82,8 +90,6 @@ def service_to_book_is_available(driver):
 
     except Exception as e:
         print(f"An error occurred at service_to_book_is_available: {e}")
-
-# -------------------------------------------------------------------
 
 
 def confirm_user_data_to_access_calendar(driver):
@@ -115,7 +121,6 @@ def confirm_user_data_to_access_calendar(driver):
     confirmation_dialog.accept()
 
 
-# -------------------------------------------------------------------
 def find_available_date_and_book(driver):
 
     # check the next 24 months
@@ -177,7 +182,7 @@ def macos_alert():
     try:
         # Run the AppleScript commands
         subprocess.run(["afplay", "/System/Library/Sounds/Ping.aiff"])
-        subprocess.run(['osascript', '-e', notification_script])
+       # subprocess.run(['osascript', '-e', notification_script])
     except Exception as e:
         print(f"An error occurred: {e}")
 
@@ -195,8 +200,11 @@ def macos_alert_error():
         print(f"An error occurred: {e}")
 
 
-# -------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
+
+    # Load environment variables from .env file
+    load_dotenv()
 
     while True:
 
@@ -209,7 +217,7 @@ if __name__ == "__main__":
             while True:
 
                 if service_to_book_is_available(driver):
-
+                    print('inside the if of service to book available')
                     sleep(400)
 
                     confirm_user_data_to_access_calendar(driver)
